@@ -1,0 +1,72 @@
+<mxfile host="app.diagrams.net" agent="claude-code" version="24.0.0">
+  <diagram name="Scheduler Architecture" id="scheduler-arch-2">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="720" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- UI node -->
+        <mxCell id="uiNode" value="Schedule UI&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;feature-flagged: SCHEDULING_ENABLED&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#EEF1F4;strokeColor=#566173;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="40" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- API layer -->
+        <mxCell id="apiNode" value="API Layer&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;scheduling.py&amp;nbsp;·&amp;nbsp;/api/schedules/*&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#DCEDEC;strokeColor=#2B6E71;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="170" width="280" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Database -->
+        <mxCell id="dbNode" value="PostgreSQL — published_workflows&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;cron_expression · cron_is_active&lt;br&gt;cron_next_run_at · cron_run_count&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;fillColor=#DCEDEC;strokeColor=#2B6E71;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="190" y="310" width="300" height="100" as="geometry" />
+        </mxCell>
+
+        <!-- Scheduler engine -->
+        <mxCell id="schedNode" value="Scheduler Engine&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;APScheduler (in-process)&lt;br&gt;scheduler_service.py&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#DCEDEC;strokeColor=#2B6E71;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="480" width="280" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Thread pool -->
+        <mxCell id="poolNode" value="Execution Manager&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;ThreadPoolExecutor · 10 workers (shared)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#DCEDEC;strokeColor=#2B6E71;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="610" width="280" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Execution engine -->
+        <mxCell id="execNode" value="Workflow Execution Engine&lt;br&gt;&lt;font style=&quot;font-size: 10px&quot;&gt;runs the graph (LangGraph)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;arcSize=10;fillColor=#EEF1F4;strokeColor=#566173;fontFamily=Helvetica;fontSize=13;fontStyle=1;align=center;" vertex="1" parent="1">
+          <mxGeometry x="200" y="730" width="280" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Main pipeline: straight vertical edges -->
+        <mxCell id="e1" value="create / update / pause / resume / trigger" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#566173;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;align=left;verticalAlign=middle;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="uiNode" target="apiNode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e2" value="writes cron fields" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#2B6E71;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;align=left;verticalAlign=middle;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="apiNode" target="dbNode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e3" value="loads schedules at startup;&#10;live-updated on every change" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#2B6E71;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;align=left;verticalAlign=middle;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="dbNode" target="schedNode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e4" value="cron fires → submit_execution()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#2B6E71;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;align=left;verticalAlign=middle;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="schedNode" target="poolNode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="e5" value="executes workflow" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#566173;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;align=left;verticalAlign=middle;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="poolNode" target="execNode">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Return loop, routed cleanly down the right margin -->
+        <mxCell id="e6" value="updates run_count, last_run_at,&#10;computes cron_next_run_at" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;fontSize=11;fontFamily=Helvetica;strokeColor=#94A2B4;dashed=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;align=left;verticalAlign=bottom;labelBackgroundColor=#F6F7F9;" edge="1" parent="1" source="execNode" target="dbNode">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="620" y="760" />
+              <mxPoint x="620" y="360" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

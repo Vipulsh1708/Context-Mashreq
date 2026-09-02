@@ -1,0 +1,646 @@
+<title>Scheduler As-Is Review</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+  :root {
+    --bg: #F6F7F9;
+    --surface: #FFFFFF;
+    --surface-alt: #EEF1F4;
+    --border: #D8DEE4;
+    --text: #1B222C;
+    --text-muted: #566173;
+    --accent: #2B6E71;
+    --accent-strong: #1E4E51;
+    --accent-soft: #DCEDEC;
+    --danger: #B54708;
+    --danger-soft: #FBEBDD;
+    --danger-border: #E9C29B;
+    --info: #3B6FB6;
+    --info-soft: #E7EFFA;
+    --info-border: #BFD3EE;
+    --good: #2F8F5B;
+    --good-soft: #E4F3EA;
+    --good-border: #BEE0CC;
+    --code-bg: #EEF1F4;
+    --shadow: 0 1px 2px rgba(27,34,44,0.04), 0 8px 24px rgba(27,34,44,0.06);
+
+    --font-display: 'Archivo', ui-sans-serif, system-ui, sans-serif;
+    --font-body: 'Source Serif 4', Georgia, 'Times New Roman', serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151C;
+      --surface: #161D26;
+      --surface-alt: #1B232D;
+      --border: #2A3542;
+      --text: #E4E8EE;
+      --text-muted: #94A2B4;
+      --accent: #5FC4C0;
+      --accent-strong: #8BDAD6;
+      --accent-soft: #17302E;
+      --danger: #F0913D;
+      --danger-soft: #33230F;
+      --danger-border: #5A4322;
+      --info: #7FADEA;
+      --info-soft: #182740;
+      --info-border: #2C4568;
+      --good: #57C08A;
+      --good-soft: #14301F;
+      --good-border: #275038;
+      --code-bg: #1B232D;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #10151C;
+    --surface: #161D26;
+    --surface-alt: #1B232D;
+    --border: #2A3542;
+    --text: #E4E8EE;
+    --text-muted: #94A2B4;
+    --accent: #5FC4C0;
+    --accent-strong: #8BDAD6;
+    --accent-soft: #17302E;
+    --danger: #F0913D;
+    --danger-soft: #33230F;
+    --danger-border: #5A4322;
+    --info: #7FADEA;
+    --info-soft: #182740;
+    --info-border: #2C4568;
+    --good: #57C08A;
+    --good-soft: #14301F;
+    --good-border: #275038;
+    --code-bg: #1B232D;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--accent-strong); }
+
+  a { color: var(--accent-strong); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .page {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 56px 24px 96px;
+  }
+
+  .prose { max-width: 700px; }
+
+  code, .mono {
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+  }
+
+  code {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.1em 0.4em;
+    color: var(--text);
+  }
+
+  /* ---------- Header ---------- */
+
+  header.doc-header {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+
+  .eyebrow {
+    font-family: var(--font-display);
+    font-size: 12.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent-strong);
+  }
+
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: clamp(32px, 5vw, 44px);
+    line-height: 1.08;
+    letter-spacing: -0.015em;
+    margin: 0;
+    text-wrap: balance;
+    max-width: 16ch;
+  }
+
+  .doc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 24px;
+    font-family: var(--font-mono);
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+
+  .doc-meta strong { color: var(--text); font-weight: 500; }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 5px 11px 5px 9px;
+    border-radius: 100px;
+    background: var(--info-soft);
+    color: var(--info);
+    border: 1px solid var(--info-border);
+    width: fit-content;
+  }
+  .status-pill::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  /* ---------- Section rhythm ---------- */
+
+  section { margin-bottom: 56px; }
+
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 23px;
+    letter-spacing: -0.01em;
+    margin: 0;
+    text-wrap: balance;
+  }
+
+  .section-num {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 16.5px;
+    margin: 0 0 6px;
+  }
+
+  p { margin: 0 0 1em; }
+  .prose p:last-child { margin-bottom: 0; }
+
+  .lede {
+    font-size: 19px;
+    line-height: 1.6;
+    color: var(--text);
+  }
+
+  /* ---------- Numbered flow ---------- */
+
+  ol.flow {
+    list-style: none;
+    counter-reset: flow;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  ol.flow li {
+    counter-increment: flow;
+    position: relative;
+    padding: 18px 0 18px 46px;
+    border-top: 1px solid var(--border);
+  }
+  ol.flow li:first-child { border-top: none; padding-top: 0; }
+  ol.flow li:last-child { padding-bottom: 0; }
+
+  ol.flow li::before {
+    content: counter(flow);
+    position: absolute;
+    left: 0;
+    top: 18px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent-strong);
+    background: var(--accent-soft);
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  ol.flow li:first-child::before { top: 0; }
+
+  ol.flow .flow-text { font-size: 16px; }
+  ol.flow .flow-file {
+    display: block;
+    margin-top: 6px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+
+  /* ---------- Figure / diagram ---------- */
+
+  figure.diagram {
+    margin: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 20px 18px;
+    box-shadow: var(--shadow);
+  }
+
+  figure.diagram svg { display: block; width: 100%; height: auto; }
+
+  figure.diagram .svg-scroll { overflow-x: auto; }
+
+  figcaption {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.55;
+  }
+
+  .diag-label { font-family: var(--font-mono); font-size: 12px; fill: currentColor; }
+  .diag-title { font-family: var(--font-display); font-weight: 700; font-size: 13.5px; fill: currentColor; }
+  .diag-sub { font-family: var(--font-mono); font-size: 10.5px; fill: currentColor; opacity: 0.72; }
+  .diag-box { fill: var(--surface-alt); stroke: var(--border); stroke-width: 1.4; }
+  .diag-box-inner { fill: var(--bg); stroke: var(--border); stroke-width: 1.2; stroke-dasharray: 3 3; }
+  .diag-arrow { stroke: currentColor; stroke-width: 1.6; fill: none; opacity: 0.55; }
+  .diag-callout {
+    fill: var(--danger);
+  }
+  .diag-callout-box { fill: var(--danger-soft); stroke: var(--danger-border); stroke-width: 1.2; }
+
+  /* ---------- Finding cards ---------- */
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (max-width: 720px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  .card {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .card.severity-confirmed { border-color: var(--danger-border); background: var(--danger-soft); }
+  .card.severity-open { border-color: var(--info-border); background: var(--info-soft); }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 10.5px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    width: fit-content;
+  }
+  .tag.confirmed { color: var(--danger); }
+  .tag.open { color: var(--info); }
+  .tag::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .card p { font-size: 15px; margin: 0; color: var(--text); }
+  .card .file-ref {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    padding-top: 2px;
+  }
+
+  /* ---------- Table ---------- */
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 12px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface);
+    font-size: 14.5px;
+    min-width: 560px;
+  }
+
+  th, td {
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  thead th {
+    font-family: var(--font-display);
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: var(--surface-alt);
+  }
+
+  tbody td.field { font-family: var(--font-mono); font-size: 13px; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-variant-numeric: tabular-nums; }
+
+  /* ---------- Callout box ---------- */
+
+  .callout {
+    display: flex;
+    gap: 14px;
+    padding: 18px 20px;
+    border-radius: 12px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    align-items: flex-start;
+  }
+  .callout .callout-icon {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--accent-strong);
+    flex-shrink: 0;
+  }
+  .callout p { margin: 0; font-size: 15.5px; }
+
+  /* ---------- Footer ---------- */
+
+  footer {
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    color: var(--text-muted);
+  }
+</style>
+
+<div class="page">
+
+  <header class="doc-header">
+    <span class="status-pill">Investigation in progress</span>
+    <h1>TADA Studio Scheduler — Current State</h1>
+    <div class="doc-meta">
+      <span>As-Is architecture review</span>
+      <span><strong>Prepared by</strong> Vipul Sharma</span>
+      <span><strong>Source</strong> aicoe-tada-builder-app (24 Aug snapshot)</span>
+    </div>
+  </header>
+
+  <section>
+    <p class="lede prose">TADA Studio's cron-based workflow scheduler is fully implemented on the backend, but switched off in production behind a feature flag. Reading the code end-to-end surfaces two confirmed structural issues and one strong open question — most plausibly connected to the earlier platform outage this feature caused.</p>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>How a schedule runs today</h2>
+    </div>
+    <figure class="diagram">
+      <div class="svg-scroll">
+        <svg viewBox="0 0 900 610" role="img" aria-label="Diagram showing a scheduled workflow's path: the API layer writes a cron schedule to a single Postgres table, two independent backend replicas each load that schedule into their own in-memory APScheduler at startup, and both fire independently into one shared 10-worker thread pool that also serves live editor, chat and API executions.">
+
+          <!-- API box -->
+          <rect class="diag-box" x="340" y="18" width="220" height="58" rx="10"/>
+          <text class="diag-title" x="450" y="42" text-anchor="middle">API layer</text>
+          <text class="diag-sub mono" x="450" y="60" text-anchor="middle">scheduling.py</text>
+
+          <!-- API -> DB arrow -->
+          <line class="diag-arrow" x1="450" y1="76" x2="450" y2="122" marker-end="url(#arrow)"/>
+          <text class="diag-label" x="466" y="102">writes cron_expression,</text>
+          <text class="diag-label" x="466" y="115">cron_is_active</text>
+
+          <!-- DB box -->
+          <rect class="diag-box" x="310" y="122" width="280" height="66" rx="10"/>
+          <text class="diag-title" x="450" y="150" text-anchor="middle">published_workflows</text>
+          <text class="diag-sub mono" x="450" y="168" text-anchor="middle">PostgreSQL — single shared table</text>
+
+          <!-- DB -> Replica A/B arrows -->
+          <path class="diag-arrow" d="M 380 188 C 340 220, 260 230, 200 250" marker-end="url(#arrow)"/>
+          <path class="diag-arrow" d="M 520 188 C 560 220, 640 230, 700 250" marker-end="url(#arrow)"/>
+          <text class="diag-label" x="450" y="222" text-anchor="middle">loads active schedules — independently, at startup</text>
+
+          <!-- Replica A -->
+          <rect class="diag-box" x="50" y="252" width="300" height="128" rx="10"/>
+          <text class="diag-title" x="200" y="278" text-anchor="middle">Backend replica A</text>
+          <rect class="diag-box-inner" x="75" y="292" width="250" height="62" rx="8"/>
+          <text class="diag-label" x="200" y="318" text-anchor="middle">APScheduler</text>
+          <text class="diag-sub mono" x="200" y="336" text-anchor="middle">in-memory job store</text>
+
+          <!-- Replica B -->
+          <rect class="diag-box" x="550" y="252" width="300" height="128" rx="10"/>
+          <text class="diag-title" x="700" y="278" text-anchor="middle">Backend replica B</text>
+          <rect class="diag-box-inner" x="575" y="292" width="250" height="62" rx="8"/>
+          <text class="diag-label" x="700" y="318" text-anchor="middle">APScheduler</text>
+          <text class="diag-sub mono" x="700" y="336" text-anchor="middle">in-memory job store</text>
+
+          <!-- Replica -> ThreadPool convergence -->
+          <path class="diag-arrow" d="M 260 380 C 300 430, 350 450, 400 466" marker-end="url(#arrow)"/>
+          <path class="diag-arrow" d="M 640 380 C 600 430, 550 450, 500 466" marker-end="url(#arrow)"/>
+
+          <!-- Callout at convergence -->
+          <rect class="diag-callout-box" x="330" y="392" width="240" height="40" rx="8"/>
+          <text class="diag-callout diag-label" x="450" y="410" text-anchor="middle" font-weight="600">fires independently —</text>
+          <text class="diag-callout diag-label" x="450" y="423" text-anchor="middle" font-weight="600">no lock between replicas</text>
+
+          <!-- ThreadPool box -->
+          <rect class="diag-box" x="300" y="466" width="300" height="70" rx="10"/>
+          <text class="diag-title" x="450" y="492" text-anchor="middle">ThreadPoolExecutor — 10 workers</text>
+          <text class="diag-sub mono" x="450" y="510" text-anchor="middle">shared: editor · chat · api · scheduler</text>
+
+          <!-- ThreadPool -> Execution -->
+          <line class="diag-arrow" x1="450" y1="536" x2="450" y2="562" marker-end="url(#arrow)"/>
+          <text class="diag-label" x="466" y="554">submit_execution()</text>
+
+          <!-- Execution engine box -->
+          <rect class="diag-box" x="330" y="562" width="240" height="40" rx="10"/>
+          <text class="diag-title" x="450" y="587" text-anchor="middle">Workflow execution engine</text>
+
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" opacity="0.6"/>
+            </marker>
+          </defs>
+        </svg>
+      </div>
+      <figcaption>One schedule, stored once in Postgres, gets loaded independently into every running backend replica's own memory at startup. Each replica's APScheduler fires it on its own — nothing stops two replicas from submitting the same scheduled run at the same moment into the one shared 10-worker pool that also serves live users.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>Step-by-step, in the code</h2>
+    </div>
+    <ol class="flow prose">
+      <li>
+        <span class="flow-text">A user calls <code>PUT /api/schedules/workflow/{id}</code> with a cron expression, timezone and active flag. The endpoint validates both before touching the database.</span>
+        <span class="flow-file">backend/api/workflow/scheduling.py — update_workflow_schedule()</span>
+      </li>
+      <li>
+        <span class="flow-text">The cron fields are written onto the existing <code>published_workflows</code> row — the same table used by the unrelated "publish workflow as public API" feature. There is no dedicated schedule table.</span>
+        <span class="flow-file">backend/models/workflows/publishing/published_workflow.py</span>
+      </li>
+      <li>
+        <span class="flow-text">The live, in-process scheduler is updated immediately so the change takes effect without a restart.</span>
+        <span class="flow-file">scheduler_service.add_or_update_schedule()</span>
+      </li>
+      <li>
+        <span class="flow-text">On every backend boot, startup code reloads every active schedule from the database into that process's own APScheduler instance — this runs per-process, with no awareness of any other replica.</span>
+        <span class="flow-file">backend/app.py:184-190 → scheduler_service.initialize()</span>
+      </li>
+      <li>
+        <span class="flow-text">When the cron time arrives, that process's APScheduler calls <code>_execute_workflow()</code> in a background thread, which hands off to the shared execution pool and returns immediately — it does not wait for the run to finish.</span>
+        <span class="flow-file">scheduler_service.py — _execute_workflow()</span>
+      </li>
+      <li>
+        <span class="flow-text">The run counter is incremented right after hand-off, not after completion — so it reflects "submitted," not "succeeded."</span>
+        <span class="flow-file">scheduler_service.py — cron_run_count += 1</span>
+      </li>
+      <li>
+        <span class="flow-text">The actual work runs on the same 10-worker thread pool that serves every editor click, chat message, and API call — scheduled and interactive traffic are never isolated.</span>
+        <span class="flow-file">backend/api/graph/constants.py — THREAD_POOL_MAX_WORKERS = 10</span>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>What exists today</h2>
+    </div>
+    <div class="prose">
+      <p>Full CRUD on a schedule (create, update, pause, resume, delete), a manual "trigger now" endpoint, cron and IANA-timezone validation, and a single environment-variable kill switch (<code>SCHEDULING_ENABLED</code>) that gates every endpoint behind a 503 when off — this is the literal mechanism behind the "Coming Soon" state in the UI. No code changes are needed to turn it on for Dev; just the env var and a restart.</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>Confirmed issues</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card severity-confirmed">
+        <span class="tag confirmed">Confirmed in code</span>
+        <p>No coordination between backend replicas. Every replica independently loads and fires the same schedules — a workflow scheduled once can run N times simultaneously if N replicas are running.</p>
+        <span class="file-ref">app.py:184-190, scheduler_service.py</span>
+      </div>
+      <div class="card severity-confirmed">
+        <span class="tag confirmed">Confirmed in code</span>
+        <p>Scheduled runs share one 10-thread pool with all live traffic. A burst of scheduled jobs can starve real users trying to run workflows in the editor at the same time.</p>
+        <span class="file-ref">constants.py — THREAD_POOL_MAX_WORKERS = 10</span>
+      </div>
+      <div class="card severity-confirmed">
+        <span class="tag confirmed">Confirmed in code</span>
+        <p><code>cron_run_count</code> / <code>cron_failure_count</code> reflect submission, not actual outcome. A workflow can fail on every run and still show a clean success count.</p>
+        <span class="file-ref">scheduler_service.py — _execute_workflow()</span>
+      </div>
+      <div class="card severity-confirmed">
+        <span class="tag confirmed">Confirmed in code</span>
+        <p>No dedicated schedule table — cron state is bolted onto <code>published_workflows</code>, a table built for a different, unrelated feature (publishing workflows as public APIs).</p>
+        <span class="file-ref">published_workflow.py</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2>Open questions — for Dipankar / Vishal</h2>
+    </div>
+    <div class="grid-2">
+      <div class="card severity-open">
+        <span class="tag open">Needs answer</span>
+        <p>How many backend replicas actually run in Dev / UAT / Prod? Not defined anywhere in this repo — <code>k8s/</code> only contains an ingress file, no deployment/replica config.</p>
+      </div>
+      <div class="card severity-open">
+        <span class="tag open">Needs answer</span>
+        <p>Standups mention a PR adding custom/dynamic input for scheduled runs. This snapshot hardcodes the input on every run path — different branch, reverted, or somewhere else entirely?</p>
+      </div>
+      <div class="card severity-open">
+        <span class="tag open">Needs answer</span>
+        <p>What did the past outage's timeline actually look like — does it line up with the replica / shared-thread-pool theory above, or was the real cause something not visible in this code?</p>
+      </div>
+      <div class="card severity-open">
+        <span class="tag open">Needs answer</span>
+        <p>Is there a reason the scheduler shares the execution thread pool rather than getting its own bounded pool — a deliberate tradeoff, or just how it was first built?</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <h2>Schedule fields on <code>published_workflows</code></h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Default</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="field">cron_expression</td><td class="mono">String, nullable</td><td class="mono num">null</td><td>The cron string itself; empty means "never scheduled"</td></tr>
+          <tr><td class="field">cron_timezone</td><td class="mono">String</td><td class="mono">"UTC"</td><td>IANA timezone the cron is evaluated in</td></tr>
+          <tr><td class="field">cron_is_active</td><td class="mono">Boolean</td><td class="mono num">false</td><td>Whether the schedule is currently live</td></tr>
+          <tr><td class="field">cron_last_run_at</td><td class="mono">Timestamp, nullable</td><td class="mono num">null</td><td>Last submission time (not last success)</td></tr>
+          <tr><td class="field">cron_next_run_at</td><td class="mono">Timestamp, nullable</td><td class="mono num">null</td><td>Computed on every save/resume</td></tr>
+          <tr><td class="field">cron_run_count</td><td class="mono">BigInt</td><td class="mono num">0</td><td>Increments on submission, not completion</td></tr>
+          <tr><td class="field">cron_failure_count</td><td class="mono">BigInt</td><td class="mono num">0</td><td>Only counts pre-submission failures</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="callout prose">
+      <span class="callout-icon">→</span>
+      <p><strong>Bottom line:</strong> the scheduler works correctly for a single backend instance. Every confirmed issue above is a scaling / isolation problem, not a logic bug — which fits a feature that was fine in testing but fell over once it met real deployment conditions. That's the shape of the next conversation with Dipankar.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>TADA Studio — R2 Scheduler Investigation</span>
+    <span>Draft — pending Dipankar/Vishal review</span>
+  </footer>
+
+</div>

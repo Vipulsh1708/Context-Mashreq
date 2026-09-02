@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Scheduler Architecture</title>
+<style>
+  body {
+    margin: 0;
+    background: #F6F7F9;
+    color: #1B222C;
+    font-family: -apple-system, Segoe UI, Helvetica, Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+  figure { margin: 0; max-width: 720px; width: 100%; }
+  svg { width: 100%; height: auto; display: block; background: #FFFFFF; border: 1px solid #D8DEE4; border-radius: 12px; }
+  figcaption { margin-top: 14px; font-size: 13px; color: #566173; line-height: 1.5; }
+  .diag-title { font-weight: 700; font-size: 14px; fill: #1B222C; }
+  .diag-sub { font-size: 10.5px; fill: #566173; }
+  .diag-box { fill: #DCEDEC; stroke: #2B6E71; stroke-width: 1.4; }
+  .diag-box-neutral { fill: #EEF1F4; stroke: #566173; stroke-width: 1.4; }
+  .diag-arrow { stroke: #566173; stroke-width: 1.6; fill: none; }
+  .diag-label { font-size: 11px; fill: #566173; }
+</style>
+</head>
+<body>
+  <figure>
+    <svg viewBox="0 0 700 900" role="img" aria-label="Scheduler architecture: Schedule UI writes to the API layer, which saves cron fields to the PostgreSQL published_workflows table and also lets the Scheduler Engine know immediately. The Scheduler Engine also loads schedules from the database at startup. When a cron fires, it hands off to the Execution Manager thread pool, which runs the Workflow Execution Engine. The engine then updates run counters back on the database row.">
+
+      <!-- UI -->
+      <rect class="diag-box-neutral" x="200" y="30" width="300" height="60" rx="10"/>
+      <text class="diag-title" x="350" y="56" text-anchor="middle">Schedule UI</text>
+      <text class="diag-sub" x="350" y="74" text-anchor="middle">feature-flagged: SCHEDULING_ENABLED</text>
+
+      <line class="diag-arrow" x1="350" y1="90" x2="350" y2="150" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="366" y="124">create / update / pause /</text>
+      <text class="diag-label" x="366" y="137">resume / trigger</text>
+
+      <!-- API -->
+      <rect class="diag-box" x="200" y="150" width="300" height="70" rx="10"/>
+      <text class="diag-title" x="350" y="178" text-anchor="middle">API Layer</text>
+      <text class="diag-sub" x="350" y="196" text-anchor="middle">scheduling.py · /api/schedules/*</text>
+
+      <line class="diag-arrow" x1="350" y1="220" x2="350" y2="280" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="366" y="254">writes cron fields</text>
+
+      <!-- DB -->
+      <rect class="diag-box" x="190" y="280" width="320" height="100" rx="10"/>
+      <text class="diag-title" x="350" y="308" text-anchor="middle">PostgreSQL — published_workflows</text>
+      <text class="diag-sub" x="350" y="326" text-anchor="middle">cron_expression · cron_is_active</text>
+      <text class="diag-sub" x="350" y="340" text-anchor="middle">cron_next_run_at · cron_run_count</text>
+
+      <line class="diag-arrow" x1="350" y1="380" x2="350" y2="450" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="366" y="410">loads schedules at startup;</text>
+      <text class="diag-label" x="366" y="423">live-updated on every change</text>
+
+      <!-- Scheduler Engine -->
+      <rect class="diag-box" x="200" y="450" width="300" height="80" rx="10"/>
+      <text class="diag-title" x="350" y="478" text-anchor="middle">Scheduler Engine</text>
+      <text class="diag-sub" x="350" y="496" text-anchor="middle">APScheduler (in-process) · scheduler_service.py</text>
+
+      <line class="diag-arrow" x1="350" y1="530" x2="350" y2="590" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="366" y="564">cron fires →</text>
+      <text class="diag-label" x="366" y="577">submit_execution()</text>
+
+      <!-- Execution Manager / thread pool -->
+      <rect class="diag-box" x="200" y="590" width="300" height="70" rx="10"/>
+      <text class="diag-title" x="350" y="618" text-anchor="middle">Execution Manager</text>
+      <text class="diag-sub" x="350" y="636" text-anchor="middle">ThreadPoolExecutor · 10 workers (shared)</text>
+
+      <line class="diag-arrow" x1="350" y1="660" x2="350" y2="710" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="366" y="690">executes workflow</text>
+
+      <!-- Execution Engine -->
+      <rect class="diag-box-neutral" x="200" y="710" width="300" height="60" rx="10"/>
+      <text class="diag-title" x="350" y="736" text-anchor="middle">Workflow Execution Engine</text>
+      <text class="diag-sub" x="350" y="754" text-anchor="middle">runs the graph (LangGraph)</text>
+
+      <!-- Return loop, right margin -->
+      <path class="diag-arrow" d="M 500 740 L 590 740 L 590 330 L 510 330" stroke-dasharray="4 3" marker-end="url(#arrow)"/>
+      <text class="diag-label" x="596" y="540" text-anchor="start" transform="rotate(90 596 540)">updates run_count, last_run_at, computes cron_next_run_at</text>
+
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#566173"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption>TADA Studio scheduler — current architecture. A schedule is created via the API, saved to Postgres, and kept in sync with the in-process Scheduler Engine both immediately (on change) and at every backend startup. When a cron fires, it runs through the same execution pipeline as every other workflow trigger, then reports back to the database.</figcaption>
+  </figure>
+</body>
+</html>
