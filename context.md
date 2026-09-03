@@ -3229,3 +3229,130 @@ This call **expands** (does not replace) the original data/context layer assignm
 ==================================================
 END OF PART 14
 ==================================================
+
+==================================================
+PART 15 — CALL WITH DIPANKAR: RAG/DOCUMENT-INGESTION TASK (2026-09-03)
+==================================================
+
+CONTEXT: Vishal walked Vipul and Dipankar through Tada Studio's current document-search architecture, assigned them to investigate and jointly propose an improvement plan, then left the call; Vipul and Dipankar continued discussing the task afterward. This session also includes screenshots from the actual live product (shared by Dipankar) and Vishal's own "Data Handling Strategy" architecture deck — these are direct, verified facts, not an AI-generated review like `existing-dataarchitecture.md` was.
+
+--------------------------------------------------
+1. THE ASSIGNMENT (FROM VISHAL)
+--------------------------------------------------
+Vipul and Dipankar are told to **work together**: investigate the current document ingestion/chunking/retrieval (RAG) approach, come up with an improvement plan, iterate on it together, then present a final proposal.
+
+Explicit expectation: **NOT** to simply implement a standard/generic RAG pipeline. Tada Studio already has a basic document retrieval system — the task is to determine how to improve/optimize the existing one, not build one from scratch.
+
+Explicit process constraint (do not skip ahead to coding):
+Understand existing architecture → Research alternatives → Evaluate trade-offs → Design proposed architecture → Discuss/iterate with teammate → Present proposal → Only then implement.
+
+Whatever is proposed must be compatible with BOTH existing retrieval surfaces (see section 3 below) — not just one of them.
+
+--------------------------------------------------
+2. CURRENT TADA STUDIO FLOW (AS DESCRIBED BY VISHAL)
+--------------------------------------------------
+**Data Sources / Document Sources page** — where users:
+1. Create a collection.
+2. Name the collection.
+3. Upload documents into it.
+4. Configure chunk size and chunk overlap themselves (adjustable per upload, not fixed).
+
+**Current chunking approach:** recursive character-based chunker — splits mainly by character count, does not account for semantic meaning or document structure.
+
+**Ingestion flow:**
+Upload document → Check Azure Blob connection → Store in Azure Blob / local storage → Extract text → Chunk text → Generate embeddings → Store data.
+
+**Two stored pieces of data:**
+- Document table — document-level metadata.
+- Chunk/vector data — extracted chunks plus their embeddings.
+
+**Retrieval flow:**
+User Query → API → Similarity Search → Relevant Chunks → Agent → Answer.
+
+--------------------------------------------------
+3. TWO PLACES THIS SAME RETRIEVAL MECHANISM IS USED
+--------------------------------------------------
+Both use the identical underlying ingestion/retrieval architecture — any proposed improvement must work for both:
+
+1. **Data Sources / Document Search** — a query can be run directly against a collection, returns relevant chunks.
+2. **Workflow → Document Search tool/node** — inside the visual workflow builder, e.g. `Start → Document Search → Agent/LLM → End`. User selects a collection; during workflow execution the query retrieves relevant chunks from that collection, which the agent then uses to generate its answer.
+
+--------------------------------------------------
+4. THE MAIN PROBLEM (AS FRAMED BY VISHAL)
+--------------------------------------------------
+Current pipeline considered too basic:
+Document → Text Extraction → Character-based Chunking → Embedding → Vector Similarity Search → Retrieved Chunks.
+
+Character-based recursive chunking doesn't sufficiently account for: semantic boundaries, document structure, sections/headings, tables, paragraphs, different document types, or relationships between chunks.
+
+--------------------------------------------------
+5. SCOPE OF WHAT VIPUL + DIPANKAR ARE EXPECTED TO RESEARCH
+--------------------------------------------------
+- Better chunking strategies (semantic vs. recursive/character-based, structure-aware/document-aware)
+- Handling different document types
+- Metadata enrichment
+- Embedding strategy
+- Vector retrieval
+- Hybrid search, if useful
+- Reranking
+- Parent-child / contextual retrieval, if useful
+- Retrieval quality evaluation — how to actually determine whether extraction and retrieval are good
+- Trade-offs between accuracy, latency, cost, and complexity
+- How the improved approach integrates with the existing Tada Studio architecture (both surfaces from section 3)
+
+NOTE: this scope overlaps heavily with — and is effectively the same task as — the data/context layer work already underway (see [[project-vipul-data-layer-assignment]], `parsingstrategy.md`, `chunking-strategy.md`, `embedding-strategy.md`). This call formalizes it as a joint task with Dipankar rather than a solo one.
+
+--------------------------------------------------
+6. VERIFIED TECHNICAL FACTS — FROM VISHAL'S OWN ARCHITECTURE DECK ("Data Handling Strategy" — slide: "Current-State Architecture — One-Page View")
+--------------------------------------------------
+IMPORTANT: this deck is authoritative — it explicitly states "Only approved facts shown. Unknown details are marked NOT VERIFIED," meaning these numbers can be treated as confirmed, not inferred.
+
+**Flow shown in the diagram:**
+User (upload/query) → Backend API (single entry point) → Persist raw file (Blob or local fallback) → Parse/extract (content extraction) → Chunk + embed (batched embeddings) → stored in the Structured Retrieval Plane (PostgreSQL): `documents` table (metadata, status, storage_path) and `document_chunks` table (chunk_text, chunk_metadata, embedding via pgvector).
+
+Auth check (collection-level) sits between Backend API and Retrieval API (shown as a dashed/control-flow line, "audit ok").
+
+Retrieval API supports similarity / text / hybrid search, returns top-k + metadata from `document_chunks`.
+
+Retrieved evidence flows into the Agentic Orchestration Runtime → workflow/agent context → response.
+
+Raw storage plane: Azure Blob Storage (when blob config enabled) or Local Filesystem (fallback/local mode only).
+
+**Confirmed technical defaults (from the deck's "Technical Defaults" box):**
+- `chunk_size` = 1000 characters
+- `chunk_overlap` = 200 characters
+- `strategy` = recursive
+- `embedding_batch_size` = 64
+- `embedding_retries` = 3
+- `retry_delay` = 1.5s
+- Chunking is **character-based, not token-based** — explicitly called out on the deck as a distinct technical detail.
+
+--------------------------------------------------
+7. VERIFIED FACTS — FROM LIVE PRODUCT SCREENSHOTS (Dipankar's screen-share, tadastudio.dev.mashreqdev.com/datasources)
+--------------------------------------------------
+**Data Sources page:** tabs are Documents / Databases / API Endpoints. Shows a collection ("03 sept") with per-document stats tracked and visible in the UI: document name, type, size, chunk count, token count, cost, status (e.g. "Processed"), upload timestamp. Confirms cost/token accounting is already implemented and user-visible, not just internal.
+
+**Supported upload file types (shown as explicit options in the upload dialog):** PDF, DOCX, TXT, CSV, XLSX, MD. (No image/audio/video types shown in this particular dialog — doesn't confirm or rule out support elsewhere, just not present in this upload flow.)
+
+**"Edit Collection" modal — per-collection, user-adjustable settings:**
+- **Whole Page Mode** toggle — when off (default seen in screenshot), documents are split into smaller chunks for search; this is effectively a built-in "disable chunking" switch when toggled on.
+- **Chunk Size** slider — example shown configured at 500 characters (differs from the deck's stated default of 1000; confirms this is a per-collection adjustable value, not fixed).
+- **Chunk Overlap** slider — example shown configured at 100 characters (deck default is 200; same adjustability point).
+- Max file size: 1 GB per file.
+
+--------------------------------------------------
+8. WHY THIS MATTERS FOR THE ONGOING WORK
+--------------------------------------------------
+This session's technical facts are more authoritative than the earlier AI-generated `existing-dataarchitecture.md` review (which Vipul had already flagged as possibly based on an outdated local codebase copy — see Part 14). Where they overlap, these verified numbers should be treated as ground truth:
+- Confirms the "mostly parameter-driven chunking" gap flagged in `existing-dataarchitecture.md` — now with the exact parameters (1000 char chunks, 200 char overlap, recursive, character-based not token-based).
+- Confirms collection-level auth check exists in the main flow — does not confirm or rule out the previously-flagged orphan-blob authorization bypass, since that would be an edge-case fallback path, not shown in this "happy path" diagram.
+- New detail not previously known: the "Whole Page Mode" toggle — an existing built-in way to skip chunking per document — worth factoring into the redesign rather than treating chunking as always mandatory.
+
+--------------------------------------------------
+9. TEAM
+--------------------------------------------------
+Present on this call: Vishal, Vipul, Dipankar. Dipankar joins Vipul specifically on this RAG/document-ingestion investigation as an explicitly assigned co-owner, not an incidental collaborator — see [[project-vipul-data-layer-assignment]] for the work-division discussion that followed.
+
+==================================================
+END OF PART 15
+==================================================

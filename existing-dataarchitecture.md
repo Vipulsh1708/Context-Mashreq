@@ -38,6 +38,89 @@ Search (vector / text / hybrid) → Inject into agent context
 
 ---
 
+## 1a) Granular Flow Diagram (added 2026-09-02)
+
+A more detailed view of the same seven-stage lifecycle above, showing the actual data domains it touches and exactly where the three gaps below bite in the live flow (not just as an abstract list).
+
+```mermaid
+flowchart TD
+    subgraph UPLOAD["1. Insertion"]
+        U1["User uploads file"] --> U2["backend/api/documents/router.py<br/>/api/documents/upload"]
+        U2 --> U3{"Validate:<br/>ownership / file type /<br/>collection constraints"}
+    end
+
+    subgraph PERSIST["2. Raw Asset Persistence"]
+        U3 -->|pass| P1["backend/services/document_storage/service.py"]
+        P1 --> P2{"Storage target?"}
+        P2 -->|local| P3["workspace/documents<br/>(local filesystem)"]
+        P2 -->|cloud| P4["Azure Blob<br/>(azureblob://... reference)"]
+        P3 --> P5["documents.storage_path<br/>(pointer saved)"]
+        P4 --> P5
+    end
+
+    subgraph PROCESS["3. Processing & Chunk Creation"]
+        P5 --> C1["Loader factories<br/>load content by file type"]
+        C1 --> C2["Chunking strategies<br/>(GAP: mostly parameter-driven,<br/>no adaptive policy per content type)"]
+        C2 --> C3["Annotate chunk metadata<br/>page / source / chunk index<br/>(lightweight only)"]
+    end
+
+    subgraph EMBED["4. Embedding Generation"]
+        C3 --> E1["embeddings/manager.py<br/>resolves embedding model"]
+        E1 --> E2["embeddings/batch_processor.py<br/>batches calls + retry +<br/>token/cost accounting"]
+    end
+
+    subgraph STORE["5. Structured Storage"]
+        E2 --> S1["storage/repository.py"]
+        S1 --> S2[("documents table<br/>status, ownership,<br/>embedding cost/tokens")]
+        S1 --> S3[("document_chunks table<br/>(pgvector)<br/>chunk text + vector field")]
+        S1 --> S4{"Mark status"}
+        S4 -->|success| S5["processed"]
+        S4 -->|failure| S6["failed"]
+    end
+
+    subgraph ACCESS["Collection Access Model (cross-cutting)"]
+        A1[("document_collections<br/>.visible_to_groups (JSONB)")]
+        A2["Owned / shared / all<br/>filtering + read-only views"]
+        A1 --> A2
+        A3["GAP: orphan-blob fallback<br/>bypasses collection auth<br/>when DB row missing"]
+    end
+
+    subgraph RETRIEVE["6. Retrieval"]
+        S3 -.available to search.-> R1["backend/api/documents/router.py<br/>/search"]
+        A2 -.access filter.-> R1
+        R1 --> R2["search_service.py"]
+        R2 --> R3{"Search mode"}
+        R3 -->|vector| R4["Embed query, vector distance<br/>in document_chunks,<br/>top-k + metadata + source links"]
+        R3 -->|text| R5["PostgreSQL full-text ranking<br/>tsvector / tsquery,<br/>lexical matches + snippets"]
+        R3 -->|hybrid| R6["Combine vector + text ranks,<br/>reciprocal-rank-fusion scoring"]
+        R4 --> R7["Results + metadata<br/>(chunk/doc IDs, file URL,<br/>query embedding cost)"]
+        R5 --> R7
+        R6 --> R7
+        R7 -.GAP: no reranker /<br/>citation confidence layer.-> R7
+    end
+
+    subgraph RUNTIME["7. Workflow Runtime Consumption"]
+        R7 --> W1["DOCUMENT_SEARCH tool node"]
+        R7 --> W2["DOCUMENT_LOAD executor"]
+        W1 --> W3["WorkflowState.node_outputs<br/>+ execution history tables"]
+        W2 --> W3
+        W3 --> W4["Injected into<br/>downstream AGENT prompt"]
+    end
+
+    style C2 fill:#ffe0e0
+    style A3 fill:#ffe0e0
+    style R7 fill:#ffe0e0
+```
+
+**The three red points are where the Section 4 gaps live in the actual flow, not just as an abstract list:**
+- **Chunking step (Stage 3):** parameter-driven, no content-type awareness — this is precisely what `chunking-strategy.md` is designed to replace.
+- **Access model:** the orphan-blob fallback that skips authorization entirely when a document's DB row is missing — a live governance risk, not a future one.
+- **Retrieval output:** no reranker/citation-confidence layer sits between search results and what gets used downstream.
+
+Everything else in this diagram — upload validation, blob/local persistence, embedding batching with retry/cost tracking, the three search modes, workflow injection — is working infrastructure the redesign builds on top of, not replaces.
+
+---
+
 ## 2) Data Domains in the Knowledge Hub
 
 | Domain | Current Storage | Usage | Main Files |
