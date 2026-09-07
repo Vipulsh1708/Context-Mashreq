@@ -3356,3 +3356,422 @@ Present on this call: Vishal, Vipul, Dipankar. Dipankar joins Vipul specifically
 ==================================================
 END OF PART 15
 ==================================================
+
+==================================================
+PART 16 — CALL WITH DIPANKAR: PPT REVIEW, WORK SPLIT, SCALING CRISIS (2026-09-03)
+==================================================
+
+CONTEXT: Follow-up call between Vipul and Dipankar (screen-sharing had technical issues throughout — not architecturally relevant, omitted). Dipankar walked through his edits to Vishal's PPT slides, relayed new context from a separate conversation with Vishal, and the two agreed on a work split.
+
+--------------------------------------------------
+1. PPT SLIDE REVIEW — STATUS FROM DIPANKAR
+--------------------------------------------------
+Dipankar has been editing Vishal's original architecture slides (the same "Current-State Architecture" and "Review One-Pager" slides captured in Part 15).
+
+**Slide 1 (Current-State Architecture diagram) — one open issue:**
+- The orange "auth check" indicator is currently placed on/near the **upload** step, which is wrong — it's causing arrow-routing/layout problems in the slide and needs to be fixed (moved to its correct place, near the retrieval/auth-check step, not upload).
+
+**IMPORTANT — Dipankar has already started code-level verification, ahead of what Part 15 assumed:**
+> "The greyed-out items you're seeing under Not Verified are things that I have verified at the code level. Those are already implemented."
+
+This means **some of the "NOT VERIFIED" items from Section 7b (Part 15 / existing-dataarchitecture.md Section 7) have already been checked by Dipankar and confirmed as actually implemented.** Exactly which specific items were confirmed was not specified in this call — needs following up directly with Dipankar for the itemized list.
+
+**Two specific metrics — partially implemented, runtime behavior uncertain:**
+- **Groundedness** and **processing cost** — Dipankar says these are "somewhat implemented" but he is **not fully certain they work correctly at runtime**. He has already messaged Vishal's team about this specific question, awaiting a response.
+
+**Slide 2 (basic ingestion flow) — fully verified, no issues:**
+Dipankar confirmed this slide is accurate and needs no changes. It shows: Upload document → file-type-appropriate loader (PDF/text/Excel) → document loaded → a "checking" step runs (a validation "checker" — confirmed real, but currently a very basic implementation). Dipankar mentioned there's more to show here but the dev environment was down at the time of the call.
+
+--------------------------------------------------
+2. NEW CONTEXT FROM VISHAL (relayed by Dipankar) — SCALING CRISIS
+--------------------------------------------------
+**Tada Studio currently has a major scaling problem.** Stress testing is actively underway to diagnose it, and as a direct result, **both the Dev and UT (user testing) environments are currently down** — this is why live demos weren't possible during this call and the "checking" step / other live features couldn't be shown.
+
+**Team split confirmed by Vishal:**
+- **Tada Studio's own team** — handles the scaling problem
+- **Vipul + Dipankar** — stay focused exclusively on the **data layer** (this call's whole topic), not the scaling issue
+
+**Vishal's specific asks for the data layer work (reiterated on this call):**
+1. Improve the current "checking" mechanism (the basic validation step from Slide 2)
+2. Find a better way to retrieve relevant context — Vishal may be looking for suggestions here specifically, per Dipankar's read (not fully confirmed)
+
+--------------------------------------------------
+3. DIPANKAR'S OWN IDEA — KNOWLEDGE GRAPH APPROACH
+--------------------------------------------------
+Dipankar proposed (his own idea, not confirmed as what Vishal wants): when a document is ingested, build a **knowledge graph** — create nodes and edges representing the information and relationships found in the document. When retrieving context later (e.g. for a "subject tool" or "suggestion tool"), query the graph to find relevant information instead of (or alongside) chunk-based retrieval. He mentioned **Neo4j** as a possible technology for this.
+
+Dipankar explicitly flagged he isn't fully sure this is what Vishal is actually looking for — it's his own read on the ask, not a confirmed direction.
+
+--------------------------------------------------
+4. ONTOLOGY — EXPLAINED TO DIPANKAR
+--------------------------------------------------
+Dipankar had not previously heard the term "ontology." Vipul explained it: ontology defines relationships between concepts, and captures how the same word/concept can mean different things depending on context — this is the rule layer that resolves that ambiguity. Vishal wants this implemented as part of the redesign (consistent with the scope-expansion already documented in `project_vipul_data_layer_assignment` memory / Part 14).
+
+--------------------------------------------------
+5. STATUS CHECK — WHO HAS DONE WHAT SO FAR
+--------------------------------------------------
+**Vipul:** Already worked through parsing, chunking, and embeddings in depth; currently on storage. Remaining: ontology, reranking, knowledge graphs, and other areas not yet started.
+
+**Dipankar:** Has gone through chunking, embedding, and parsing at a refresher/review level (less deep than Vipul's work — described as "refreshed my understanding," not original research).
+
+**Parsing strategy (confirmed again in this call):** Vipul is using a **cascading approach** — matches the tiered escalation cascade already documented in `parsingstrategy.md`.
+
+**Chunking strategy (confirmed again in this call):** In discussing whether to focus on semantic chunking, Vipul clarified his actual approach is **multiple chunking strategies based on document type/structure** — sentence-based for prose, row-based for tables, field-based for forms, etc. — matching what's already documented in `chunking-strategy.md`. This is explicitly **not** semantic chunking (semantic chunking was raised as a question/consideration, not adopted).
+
+--------------------------------------------------
+6. WORK SPLIT AGREED ON THIS CALL
+--------------------------------------------------
+Since Vipul had already started parsing, chunking, embeddings, and storage, the two agreed:
+
+- **Dipankar → Retrieval and Ontology** ("Yes, you can look into ontology and retrieval for now.")
+- **Vipul → continues owning parsing/chunking/embedding/storage**, and will additionally: (a) send Dipankar the embedding work/project so far, and (b) separately look into "what the situation is with the data ontology" himself, then follow up with comments.
+
+**Note — this overlaps with, and is more specific than, the work-division proposal discussed earlier in this session (see Part 15 follow-up / project-vipul-data-layer-assignment memory).** That earlier proposal suggested Vipul owns ontology/reranking/evaluation while Dipankar verifies the current system + integration constraints. This actual call assigns **ontology work to both of them in parallel for now** (Dipankar starting on it, Vipul also separately checking the situation), and gives **retrieval specifically to Dipankar** — narrower and more concrete than the earlier proposal. Treat this call's division as the current source of truth; the earlier proposal was theoretical/suggested, this one is what was actually agreed with Dipankar.
+
+--------------------------------------------------
+7. IMMEDIATE NEXT STEPS (FROM THIS CALL)
+--------------------------------------------------
+1. Fix the orange auth-check placement issue on Slide 1 (currently on upload step, needs moving)
+2. Get the itemized list from Dipankar of exactly which NOT VERIFIED items he's already confirmed at the code level
+3. Follow up on Dipankar's message to Vishal's team about groundedness/processing-cost runtime behavior
+4. Vipul to send Dipankar the embedding work/project
+5. Vipul to look into the ontology situation and report back with comments
+6. Dipankar to start on retrieval and ontology
+
+==================================================
+END OF PART 16
+==================================================
+
+==================================================
+PART 17 — TEAMS CHAT WITH DIPANKAR: BM25 STATUS, WORK SPLIT CONFIRMED, EMBEDDING MODEL GAP (2026-09-04)
+==================================================
+
+CONTEXT: Written Teams chat between Vipul Sharma and Dipankar Srivastava, timestamped 1:27 PM – 1:48 PM on 9/4/2026. This is a direct written record (not a call transcript), so quotes here are Dipankar's/Vipul's own words, verbatim.
+
+--------------------------------------------------
+1. BM25 STATUS — CONFIRMED IN WRITING BY DIPANKAR
+--------------------------------------------------
+Vipul asked: "So BM25 is it tested and giving positive results?"
+
+Dipankar's answer, verbatim:
+- "Functionality wise it is working from backend, Frontend changes needs to be implemented"
+- "Accuracy was never compared with other retrieval mechanism"
+- "Since Bm25 is a well known keyword search methodology, It may give better result compared to current"
+
+**This confirms exactly what was inferred earlier in this session:** BM25 is functionally working on the backend, but there is still frontend work pending, and — critically — there is **no accuracy comparison against the previous ranking method**. Dipankar's justification is based on BM25's general reputation, not measured evidence. Matches the broader "no evaluation baseline exists" gap already documented in `existing-dataarchitecture.md` Section 7b.
+
+--------------------------------------------------
+2. WORK SPLIT — RECONFIRMED DIRECTLY BY DIPANKAR
+--------------------------------------------------
+When Vipul asked whether Dipankar had researched parsing/chunking/embedding/storage yet, Dipankar replied: **"Yes, you have told me to focus on the retrieval and data ontology."**
+
+This directly reconfirms the split already documented in Part 16: Dipankar owns retrieval + ontology; Vipul owns parsing/chunking/embedding/storage (already finalized).
+
+**New agreement reached in this chat:**
+- Both will independently research/document their assigned areas, then connect once both are ready — Dipankar explicitly asked Vipul to wait for him ("Wait for me, to research and document my findings, then we can connect") rather than syncing immediately with partial findings.
+- Vipul offered to create a document explaining the finalized parsing/chunking/embedding/storage tech stack and reasoning ("why they are better") for Dipankar to review.
+- Dipankar separately proposed they **each create a document on their respective approaches and connect once, so both are on the same page** — i.e. two documents, one sync, not continuous back-and-forth.
+- Vipul agreed to also look into retrieval himself "if I get time," so he can meaningfully discuss Dipankar's approach when they connect — not to duplicate Dipankar's work, but to be able to engage with it.
+
+--------------------------------------------------
+3. NEW FINDING — NO MULTIMODAL EMBEDDING CAPABILITY EXISTS IN TADA STUDIO
+--------------------------------------------------
+Vipul raised this directly: **"In Tada Studio, we only have text based embeddings. So we dont have any option for multimodal embeddings."**
+
+Dipankar's response, verbatim: **"That is a gap for us to fill, But apparently most of the ingestion is through documents, so there was no case for Image and text to be sent seperately."**
+
+**What this means:** Tada Studio currently has no way to generate embeddings for images independently of text — everything goes through a text-only embedding path. Dipankar frames this as a real, acknowledged gap, but rationalizes why it hasn't mattered yet (ingestion so far has been document-heavy, not image-heavy, so the need never surfaced).
+
+**This is a new gap, not previously documented** — worth adding to the running gap list alongside reranker/PII-masking/etc.
+
+--------------------------------------------------
+4. CONFIRMED — EMBEDDING MODEL IDENTITY IS GENUINELY UNKNOWN (NOT JUST "UNVERIFIED")
+--------------------------------------------------
+Vipul asked directly: **"there is no specification of any embedding model as well? Do you have any idea about that? Like from the slides you shared and the document which vishal shared nothing is specified"**
+
+Dipankar's answer, verbatim: **"Yes, We dont have any specific embedding model I am not aware of."**
+
+**This directly corroborates Section 7b of `existing-dataarchitecture.md`**, where "embedding model identity" was listed under Vishal's own NOT VERIFIED items. Dipankar's confirmation here removes any remaining doubt: **nobody currently knows which embedding model Tada Studio's existing system actually uses** — it's not documented anywhere Dipankar has seen (not in Vishal's slides, not in any shared document).
+
+--------------------------------------------------
+5. AGREED NEXT STEP ON EMBEDDING
+--------------------------------------------------
+Vipul proposed: **"We should come with better text embedding model first i think, then we will go with image, if thats fine"**
+
+Dipankar agreed: **"Yes we can discuss about this."**
+
+**Sequencing agreed:** fix/upgrade the text embedding model first (this is the work already done in `embedding-strategy.md` — Azure OpenAI `text-embedding-3-large`, in-tenant). Image/multimodal embedding is explicitly deferred to a later phase, not being tackled now.
+
+--------------------------------------------------
+6. UPDATED GAP LIST (net new items from this chat)
+--------------------------------------------------
+- **No multimodal embedding capability** — new gap, confirmed by Dipankar, deferred until text embedding is finalized
+- **BM25 accuracy vs. previous ranking** — still unmeasured, confirmed directly by Dipankar as never having been compared
+- **Current embedding model identity** — confirmed genuinely unknown (not documented anywhere), not just "unverified on a slide"
+
+==================================================
+END OF PART 17
+==================================================
+
+==================================================
+PART 18 — TADA STUDIO DAILY STANDUP (2026-09-04)
+==================================================
+
+CONTEXT: Full team standup covering platform-wide priorities, not limited to the data/context layer work. Included here for reference since it affects overall team bandwidth/environment availability (e.g., explains why Dev/UAT have been unstable) and includes one item (scheduler ticket 7593) directly involving Dipankar.
+
+--------------------------------------------------
+1. TOP PRIORITIES
+--------------------------------------------------
+1. **On-prem / Cloud Solution Design** — top priority, owned by Sachin/Vishal side. Will go through peer review; architecture/design artifacts need preparing early. Goal: align platform architecture with upcoming use cases and release plans.
+2. **R2 Activities** — second priority. R2-RTK has 4 priority defects. Sachin and Vishal expected to drive this.
+3. **No new use-case onboarding for 2026** — only already-committed use cases proceed this year. CCLM and NeoCorp reclassified as 2027-oriented (early/mid-2027). NeoCorp is cloud-only; CCLM has an on-prem requirement.
+
+--------------------------------------------------
+2. UAT / PLATFORM STABILITY
+--------------------------------------------------
+**Bug 7468 (DB Query Tool blocking call):** Marked resolved in ETL, but UAT validation still pending as of this standup; expected to reach UAT same day per discussed ETA.
+
+**Tool-calling / Ticket 746:** Expected around the 3rd, said to be deployed in UAT. Sachin needs to verify it's actually working and internally validated with QA/Lakshya — some downstream issues may trace back to this not being validated yet.
+
+**UAT Out-of-Memory issue (major discussion):**
+- One workflow consumed ~32GB memory; other pods already using ~12-15GB → node ran out of memory and crashed/restarted.
+- Same behavior observed in both Dev and UAT.
+- The workflow creates multiple sub-workflows; if expected data insertion doesn't happen, it appears to repeatedly re-trigger those sub-workflows, continuing for 10-15 minutes before the environment crashes.
+- Potential fixes discussed: (1) add another node/horizontal scaling, (2) optimize the workflow/code to reduce memory usage.
+- **RCA not yet formally confirmed.** Hans requested: exact workflow, health-check data, exact environment affected, clear incident timeline.
+- Sayyad needs to provide/share the workflow for investigation.
+
+**Note — this is likely the same scaling crisis referenced by Vishal to Dipankar in Part 16** (major Tada Studio scaling problem causing Dev/UT downtime), now with concrete technical detail: ~32GB single-workflow memory consumption, sub-workflow retry loop as the likely mechanism.
+
+--------------------------------------------------
+3. VISION CAPABILITY
+--------------------------------------------------
+Being enabled/tested. Abid asked to provide a sample file read to check if it resolves the issue. No ETA committed — depends on underlying LLM/vision capability. Team wants an ETA after internal discussion (important for UAT/planning); any changed ETA must be communicated via email.
+
+--------------------------------------------------
+4. SCHEDULER — TICKET 7593 (Involves Dipankar directly)
+--------------------------------------------------
+Abid working with **Dipankar** on scheduler limiting. Requirement: limit the number of active schedules, plus ability to pause active schedulers. **Dipankar has already completed backend work and raised a PR.** Abid handling frontend changes. Target: merge into Dev.
+
+**Related MCP work:** New use case needs MCP integration. Initial integration done, but requirements changed — authentication and MCP access tracking now required. Abid to work on this after/alongside scheduler work.
+
+--------------------------------------------------
+5. BUILD AGENT / CI-CD
+--------------------------------------------------
+Additional ACL raised for Build Agent dev/deployment. Tentative target: Monday (pending ACL completion). Non-prod CI/CD setup/testing planned around the 9th. Separate Dockerfile-related ACL issue exists. CMDB request in progress. Monitoring has a related ticket. Pipeline plan/details to be shared by email.
+
+--------------------------------------------------
+6. TADA CHAT / DASHBOARD
+--------------------------------------------------
+Dashboard moved to Dev. Integration with Tada Chat ongoing. Bug found: Tada Chat feedback not being stored in the database — needs investigation alongside completing integration. Already-merged/reviewed tickets should be closed after confirmation.
+
+--------------------------------------------------
+7. EXECUTION-RELATED FIXES
+--------------------------------------------------
+**Ticket 7529:** Execution should not run when an LLM model isn't configured/available. Backend + frontend validation implemented, PR raised.
+
+**Execution status bug:** Status wasn't displaying correctly — fixed, PR raised with test scenarios attached. Needs Sachin's approval/review.
+
+--------------------------------------------------
+8. ROADMAP / 2027 PLANNING
+--------------------------------------------------
+Team building a combined roadmap covering Tada Studio + application use cases + integration teams. Should include: Tada Studio responsibilities, use-case/integration-team responsibilities, milestones, acceptance criteria, impact if criteria aren't met, operational/financial implications, and dependencies between platform releases and use cases. Being reviewed with Ali before sharing. Use cases vary in complexity (simple drag-and-drop/virtual-assistant vs. complex integration-heavy workflows).
+
+--------------------------------------------------
+9. ALTAIR DEFECTS / ARTIFACTS
+--------------------------------------------------
+Relevant Altair defect numbers need sharing by Ritika, Sachin, and Nishal. Required changes to be discussed/confirmed. These changes will update the partition draft — important dependency. All relevant artifacts/documents should be shared with the appropriate team.
+
+--------------------------------------------------
+10. IMMEDIATE ACTION LIST
+--------------------------------------------------
+**Highest priority:** On-prem/cloud solution design; R2 activities; 4 R2-RTK defects; UAT/platform stability.
+
+**Specific follow-ups:** Validate 7468 in UAT · Confirm tool-calling/746 in UAT · Get Sayyad's workflow + health-check/incident data for OOM investigation · Complete scheduler limiting frontend work for 7593 · Follow up on Build Agent ACL · Continue Tada Chat integration and feedback DB issue · Get Altair defect numbers and finalize partition draft changes · Share/prepare roadmap and architecture artifacts.
+
+**Overall direction:** Team balancing platform stabilization + R2 delivery + on-prem/cloud architecture planning, while avoiding new 2026 use-case onboarding beyond already-committed work.
+
+==================================================
+END OF PART 18
+==================================================
+
+==================================================
+PART 19 — TADA STUDIO DAILY STANDUP (2026-09-07)
+==================================================
+
+CONTEXT: Full team standup covering platform-wide work status, priorities, and known issues. Directly affects Vipul's context/data layer work and overall team coordination.
+
+--------------------------------------------------
+1. TOP PRIORITIES (2026-09-07)
+--------------------------------------------------
+1. **On-prem / Cloud Solution Design** — top priority, Sachin's side. Design going through peer review. Architecture artifacts needed early.
+2. **R2 Activities** — second priority. R2-RTK has 4 priority defects. Sachin/Vishal driving.
+3. **Platform Stabilization** — UAT/platform issues blocking downstream use cases. Defect resolution, UAT validation, execution stability critical.
+
+--------------------------------------------------
+2. USE-CASE SCOPE CLARITY (2026-09-07)
+--------------------------------------------------
+* **No new 2026 use-case onboarding** — only already-committed use cases proceed in 2026.
+* **CCLM and NeoCorp reclassified as 2027-oriented**, not 2026 delivery.
+  - NeoCorp: cloud-only architecture
+  - CCLM: has on-prem requirement
+* **Combined roadmap** (Tada Studio + use cases + integration teams) in progress, being reviewed before wider share. Must include: responsibilities, milestones, acceptance criteria, impact analysis, operational/financial implications, dependencies.
+
+--------------------------------------------------
+3. CRITICAL DEFECTS
+--------------------------------------------------
+
+**Defect 7468 (DB Query Tool blocking call):**
+- Issue: DB Query Tool blocks when certain keywords appear in input.
+- Status: Fix is done/resolved in **Dev/ETL**, NOT YET in UAT.
+- Blocker: Use-case team's testing is blocked waiting for UAT fix.
+- Next: Needs UAT deployment ETA + validation confirmation. Do not mark resolved until UAT confirms.
+
+**Tool-calling issue (parallel execution):**
+- Observation: Workflows with for-each loops executing in parallel lose some tool calls.
+- Impact: **CRITICAL** — causes workflow failures, affects multiple use cases, high-volume/parallel execution broken.
+- Scope: Documented by Sachin, needs proper ADO ticket with reproduction steps + evidence.
+- Root cause: Not yet confirmed, needs technical investigation.
+
+**Large-file issue (separate from tool-calling):**
+- Observation: Opening/working with large files while execution is running can affect execution/application.
+- Suspected reproducible: Needs sufficiently large file.
+- Status: Root cause not confirmed.
+- **Important:** This is SEPARATE from parallel tool-calling issue — track as two distinct defects.
+
+**UAT Out-of-Memory crash (suspected RCA, not confirmed):**
+- Observation: Workflow consumed ~32GB, other pods ~12-15GB → node ran out of memory, crashed.
+- Environments: Both Dev and UAT.
+- Suspected mechanism: Workflow creates sub-workflows. If expected data insertion fails, sub-workflows re-trigger repeatedly for ~10-15 minutes → cascade failure.
+- Potential fixes: (1) add another node/scale horizontally, (2) optimize workflow/code.
+- **Not confirmed RCA yet** — needs: exact workflow, health-check data, exact environment, incident timeline. Sayyad to provide workflow.
+
+--------------------------------------------------
+4. SCHEDULER — TICKET 7593
+--------------------------------------------------
+Requirement: Limit number of active schedules; ability to pause active schedulers.
+
+Status:
+* **Dipankar completed backend** implementation, PR raised.
+* **Abid handling frontend** integration, target merge to Dev.
+
+Related MCP work:
+* New use case needs MCP integration.
+* Initial integration done, requirements changed.
+* Now needs: **authentication + MCP access tracking**.
+* Abid to handle alongside scheduler work.
+
+--------------------------------------------------
+5. VISION CAPABILITY
+--------------------------------------------------
+* Being enabled/tested.
+* Abid to provide sample file-read scenario to validate resolution.
+* No firm ETA — depends on LLM/vision capability.
+* Team wants ETA after internal discussion (important for UAT planning).
+* ETA changes must be communicated via email.
+
+--------------------------------------------------
+6. BUILD AGENT / CI-CD
+--------------------------------------------------
+* Additional ACL raised for Build Agent dev/deployment.
+* Tentative deployment: Monday (pending ACL completion).
+* Non-prod CI/CD setup/testing: around the 9th.
+* Separate Dockerfile ACL issue exists.
+* CMDB request in progress.
+* Monitoring has a related ticket.
+* Pipeline plan/details to be shared.
+
+--------------------------------------------------
+7. DASHBOARD → TADA CHAT INTEGRATION
+--------------------------------------------------
+* Dashboard moved to **Dev**.
+* Integration with Tada Chat ongoing.
+* Bug found: **Tada Chat feedback not being stored in database**.
+* Needs investigation alongside integration completion.
+* Already-merged/reviewed tickets to be closed after confirmation.
+
+--------------------------------------------------
+8. EXECUTION-RELATED TICKETS
+--------------------------------------------------
+
+**Ticket 7529:**
+* Requirement: Execution should not run when LLM model is unavailable/not configured.
+* Implementation: Backend + frontend validation completed, PR raised.
+
+**Execution status display bug:**
+* Issue: Status not displaying correctly.
+* Status: Fixed, PR raised with test scenarios/evidence attached.
+* Blocker: Sachin's review/approval needed.
+
+--------------------------------------------------
+9. ALTAIR DEFECTS / PARTITION DRAFT
+--------------------------------------------------
+* Relevant Altair defect numbers to be shared by Sachin/Nishal/Ritika.
+* Required changes need identification + confirmation.
+* These changes will update the **partition draft** (important downstream dependency).
+* All relevant artifacts/docs to be shared with appropriate teams.
+
+--------------------------------------------------
+10. TADA ONLINE DISTRIBUTION
+--------------------------------------------------
+* High-level discussions started with commercial team.
+* High-level design being prepared.
+* Will involve multiple channel/integration activities, several dependent teams.
+
+--------------------------------------------------
+11. PLATFORM STABILITY OBSERVATIONS
+--------------------------------------------------
+* Some executions showing no response or significant delays.
+* Execution failures across different states/environments.
+* General platform stability described as unstable.
+* Team wants these issues: logged as tickets quickly, properly documented, investigated (not lost in emails/messages).
+
+--------------------------------------------------
+12. BROAD DIRECTION (2026-09-07)
+--------------------------------------------------
+**Focus: Platform stabilization + R2 delivery + on-prem/cloud architecture planning**
+
+NOT simply adding new features. Immediate priority is making existing platform reliable enough for committed use cases while preparing architecture/design and roadmap for 2027.
+
+--------------------------------------------------
+13. CONFIRMED VS. NEEDS CONFIRMATION
+--------------------------------------------------
+
+**Confirmed:**
+- No new 2026 use-case onboarding except already-committed.
+- CCLM/NeoCorp are 2027-oriented.
+- NeoCorp cloud-only, CCLM on-prem requirement.
+- On-prem/cloud solution design is top priority.
+- R2-RTK has 4 priority defects.
+- DB Query Tool fix done in Dev, needs UAT validation.
+- Parallel tool-calling issue is affecting execution.
+- Large-file issue is separate from tool-calling.
+- Scheduler backend done (Dipankar), frontend in progress (Abid).
+- Platform stability/UAT issues affecting downstream testing.
+
+**Still needs confirmation:**
+- Exact RCA of OOM crash.
+- ETA for 7468 UAT deployment/validation.
+- Root cause of large-file issue.
+- Scope/status of some Altair defects.
+- Requirements/timeline for Tada online distribution.
+- Technical behavior and final fix for tool-calling.
+- Final approved combined roadmap.
+
+--------------------------------------------------
+14. TRACKING GUIDANCE
+--------------------------------------------------
+When analyzing future Tada discussions, keep distinctions clear:
+
+1. Dev fix ≠ UAT validated fix.
+2. Suspected RCA ≠ confirmed RCA.
+3. Platform capability issue ≠ use-case implementation issue.
+4. Tool-calling failure ≠ large-file failure (separate issues).
+5. 2026 delivery scope is limited to already-committed use cases.
+6. CCLM/NeoCorp should be treated as 2027 planning requirements.
+7. For architecture/design: identify existing capabilities/dependencies before proposing new services/APIs.
+8. For every defect: track ticket → owner → environment → status → ETA → validation status → blocker/dependency.
+
+==================================================
+END OF PART 19
+==================================================

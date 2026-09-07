@@ -116,17 +116,61 @@ TIER 3: Vision-LLM (in-tenant Azure OpenAI)                          Time-aligne
 
 ---
 
-## 6. How Escalation Actually Works (Confidence Signals)
+## 6. How Escalation Actually Works — Three Approaches Under Evaluation
 
-Tier-specific, not one uniform mechanism:
+**Status (2026-09-07):** We are testing three different escalation-decision mechanisms against real banking documents. Final choice will be based on empirical validation; all three are viable in principle.
 
-- **PyMuPDF → Docling (original trigger):** No real ML confidence — rule-based check (any extractable text at all? suspiciously low character density = likely scanned).
-- **PyMuPDF → Docling (chunking-driven trigger, added 2026-09-02):** Escalate whenever the document type needs structural chunking — i.e. contains tables, forms, or multiple distinct sections — regardless of whether PyMuPDF successfully extracted clean text. This is a *content-type* check, not a parsing-quality check: a document can pass PyMuPDF's own extraction perfectly and still need Docling purely because downstream chunking can't correctly handle its structure without layout/table detection (see `chunking-strategy.md` section 1.1). For Tada Studio's banking document mix (statements, KYC forms, contracts, IDs — nearly all structured), this trigger fires on most documents, meaning Tier 0 rarely finishes the job alone in practice. **Cost/latency caveat:** this quietly gives up some of the cascade's original savings promise — the pitch was "most documents resolve for free at the cheapest tier," but if almost nothing stays at Tier 0 for this platform's document mix, PyMuPDF's practical role narrows to a fast first check (does a text layer exist at all — useful for detecting scans cheaply) rather than a tier that regularly finishes processing alone. The cascade still has real value further up the chain (Docling → Azure DI → Vision-LLM), just less so at this first step.
-- **Which documents genuinely stay at Tier 0:** only truly flat, unstructured documents — plain prose with no tables, forms, or distinct sections (e.g. a simple internal memo). These use the lightweight chunking path in `chunking-strategy.md` instead of the full layout-aware pipeline. The same signal that decides parsing-tier escalation decides chunking-path routing — one decision made once per document, not two separate classifications.
-- **Docling → Azure DI:** Docling's Python library exposes a genuine confidence score (0.0–1.0) plus a quality grade (poor/fair/good/excellent). **Caveat:** only available calling Docling's Python library directly — not exposed if run as an isolated service (`docling-serve`). This is one of our open decisions (see below).
-- **Docling → Azure DI (alternate trigger):** Route by document classification — if pre-identified as a form/ID/invoice type, skip straight to Tier 2 rather than waiting for Docling to underperform.
-- **Azure DI → Vision-LLM:** Azure DI natively returns confidence scores per word, per field, and (for custom models, recent API versions) per table cell — the cleanest signal in the whole cascade, purpose-built for exactly this decision.
-- **Vision-LLM (Tier 3, no further escalation):** No reliable native confidence. Options considered: ask the model to self-report confidence (weak — models are poorly calibrated, especially about content they silently omitted), run twice and compare for consistency (doubles cost, acceptable since this tier is rare), or structurally validate output (e.g., cross-check extracted table row-count against a rough visual estimate) — most reliable but requires custom engineering.
+### Approach A: Quality/Output-Based Escalation
+
+**Decision logic:** Run the current tier, measure output quality, escalate if quality is poor.
+
+- **PyMuPDF → Docling:** Check extracted text: if length < 100 chars, garbled_char_ratio > 10%, or confidence_score < 0.7 → escalate.
+- **Docling → Azure DI:** Docling's Python library exposes genuine confidence score (0.0–1.0) plus quality grade (poor/fair/good/excellent). Escalate below threshold.
+- **Azure DI → Vision-LLM:** Azure DI natively returns confidence scores per word, per field, per table cell — escalate if field-level confidence < threshold.
+
+**Pros:** Grounded in actual results, clear signal, only escalates when necessary.
+
+**Cons:** Wastes one parsing call per failed document. Thresholds need calibration from test data. Requires quality metrics to be implemented.
+
+### Approach B: Structure/Layout-Based Escalation
+
+**Decision logic:** Detect document structure/content-type BEFORE parsing. Route to tier that best handles that structure.
+
+- **PyMuPDF → Docling:** If document contains tables, forms, or multi-column layout → escalate (Docling preserves structure; PyMuPDF flattens it). This is a *content-type* check, not a parsing-quality check.
+- **Docling → Azure DI:** If pre-identified as form/ID/invoice type, skip to Tier 2 rather than wait for Docling to underperform on specialized structures.
+- **Azure DI → Vision-LLM:** If output still contains low-confidence fields, or layout is genuinely unusual → escalate.
+
+**Pros:** Avoids wasted parsing calls. Targets right tool to document type. Prevents known failure modes (e.g., PyMuPDF on tables).
+
+**Cons:** Requires upfront layout detection logic. Needs test data to validate detection accuracy.
+
+**Note (2026-09-02 finding):** For Tada Studio's banking document mix (statements, KYC forms, contracts, IDs — nearly all structured), this trigger fires on most documents, meaning Tier 0 rarely finishes alone in practice. **Cost/latency caveat:** this gives up some of the cascade's original savings promise. PyMuPDF's practical role narrows to a fast first check (does a text layer exist — useful for detecting scans cheaply) rather than a tier that regularly finishes processing.
+
+### Approach C: File Characteristics-Based Escalation
+
+**Decision logic:** Check file metadata BEFORE parsing. Use heuristics to predict complexity.
+
+- **PyMuPDF → Docling:** If file_size > 5MB → escalate (large files often contain complex layouts, tables).
+- **Docling → Azure DI:** If image_ratio > 50% → escalate (mostly images, likely scanned or highly visual).
+- **Any tier → next:** If embedded fonts detected as missing/substituted → escalate (likely corrupted/complex structure).
+
+**Pros:** Fastest approach (no parsing needed). Zero wasted parsing calls. Uses only metadata.
+
+**Cons:** Crude heuristics (file size ≠ complexity). May escalate unnecessarily. May miss complex small documents.
+
+### Next Step
+
+Empirical testing (2026-09-07 onward): Will test all three approaches against real banking documents and finalize based on which works best for Tada's actual document mix.
+
+---
+
+### Backup: Tier-Specific Escalation Details (for reference)
+
+If not using one of the three unified approaches above:
+
+- **Docling deployment mode caveat:** Docling's confidence score is only available calling the Python library directly — not exposed if run as `docling-serve` isolated pod. This affects whether Approach A is feasible.
+- **Which documents genuinely stay at Tier 0:** only truly flat, unstructured documents — plain prose with no tables, forms, or distinct sections (e.g. a simple internal memo). These use the lightweight chunking path in `chunking-strategy.md`. The same signal that decides parsing-tier escalation decides chunking-path routing — one decision made once per document, not two separate classifications.
+- **Vision-LLM (Tier 3, no further escalation):** No reliable native confidence. Options: ask model to self-report confidence (weak), run twice and compare (expensive but acceptable since rare), or structurally validate output (most reliable but requires custom engineering).
 
 ---
 
