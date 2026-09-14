@@ -1,0 +1,724 @@
+<title>Cross-Collection Retrieval Comparison</title>
+
+<style>
+  :root {
+    --primary: #2563eb;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --gray-100: #f3f4f6;
+    --gray-200: #e5e7eb;
+    --gray-700: #374151;
+    --gray-900: #111827;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: var(--gray-900);
+    background: var(--gray-100);
+    padding: 20px;
+    margin: 0;
+  }
+
+  .container {
+    max-width: 1600px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    overflow: hidden;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--primary) 0%, #1e40af 100%);
+    color: white;
+    padding: 40px;
+    text-align: center;
+  }
+
+  .header h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 700;
+  }
+
+  .header p {
+    margin: 10px 0 0 0;
+    font-size: 16px;
+    opacity: 0.9;
+  }
+
+  .comparison-wrapper {
+    overflow-x: auto;
+    padding: 20px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+
+  thead {
+    background: var(--gray-100);
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    color: var(--gray-900);
+    border-right: 1px solid var(--gray-200);
+  }
+
+  th:last-child {
+    border-right: none;
+  }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--gray-200);
+    border-right: 1px solid var(--gray-200);
+  }
+
+  td:last-child {
+    border-right: none;
+  }
+
+  tbody tr:hover {
+    background: var(--gray-100);
+  }
+
+  .approach-name {
+    font-weight: 600;
+    color: var(--primary);
+    min-width: 180px;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+
+  .badge-fast {
+    background: #d1fae5;
+    color: var(--success);
+  }
+
+  .badge-slow {
+    background: #fee2e2;
+    color: var(--danger);
+  }
+
+  .badge-medium {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  .rating {
+    display: flex;
+    gap: 4px;
+  }
+
+  .star {
+    color: #fbbf24;
+    font-size: 14px;
+  }
+
+  .star.empty {
+    color: var(--gray-300);
+  }
+
+  .code-block {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: "Monaco", "Courier New", monospace;
+    font-size: 12px;
+    overflow-x: auto;
+    margin: 8px 0;
+  }
+
+  .pros {
+    color: var(--success);
+    font-weight: 500;
+  }
+
+  .cons {
+    color: var(--danger);
+    font-weight: 500;
+  }
+
+  .section {
+    padding: 30px 40px;
+    border-bottom: 2px solid var(--gray-200);
+  }
+
+  .section:last-child {
+    border-bottom: none;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--gray-900);
+  }
+
+  .detailed-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  .card {
+    background: var(--gray-100);
+    border: 2px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 20px;
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 12px;
+    border-bottom: 2px solid var(--primary);
+    padding-bottom: 8px;
+  }
+
+  .card-content {
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .metric {
+    margin: 12px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .metric-label {
+    font-weight: 600;
+    flex: 1;
+  }
+
+  .metric-value {
+    background: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .recommendation {
+    background: #ecfdf5;
+    border-left: 4px solid var(--success);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+  }
+
+  .recommendation h3 {
+    margin: 0 0 10px 0;
+    color: var(--success);
+  }
+
+  .recommendation p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: var(--gray-700);
+  }
+
+  .warning-box {
+    background: #fffbeb;
+    border-left: 4px solid var(--warning);
+    padding: 20px;
+    margin: 20px 0;
+    border-radius: 6px;
+  }
+
+  .warning-box h3 {
+    margin: 0 0 10px 0;
+    color: #d97706;
+  }
+
+  .decision-matrix {
+    margin-top: 20px;
+  }
+
+  .use-case-row {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: 20px;
+    padding: 16px;
+    background: var(--gray-100);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+
+  .use-case-label {
+    font-weight: 600;
+    color: var(--gray-900);
+  }
+
+  .use-case-answer {
+    color: var(--gray-700);
+  }
+
+  .highlight {
+    background: #fef08a;
+    padding: 2px 4px;
+    border-radius: 2px;
+    font-weight: 600;
+  }
+</style>
+
+<div class="container">
+  <div class="header">
+    <h1>🔍 Cross-Collection Retrieval Comparison</h1>
+    <p>5 Approaches for Multi-Domain RAG Pipeline</p>
+  </div>
+
+  <div class="comparison-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Approach</th>
+          <th>How It Works</th>
+          <th>Speed</th>
+          <th>Quality</th>
+          <th>Implementation</th>
+          <th>When to Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Approach 1 -->
+        <tr>
+          <td class="approach-name">1. Entity-Based</td>
+          <td>
+            <strong>Mechanism:</strong> Extract entity from query, find all chunks tagged with that entity across collections
+            <div class="code-block">Find chunks WHERE entity_ids = [CUST_RAJ]
+across ALL collections</div>
+            <strong>Flow:</strong> Query → Entity Extract → DB lookup → Return chunks
+          </td>
+          <td>
+            <div class="badge badge-fast">50-100ms</div>
+            <div style="font-size: 12px; margin-top: 4px;">⚡⚡⚡⚡ Very Fast</div>
+          </td>
+          <td>
+            <div class="rating">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star empty">★</span>
+              <span class="star empty">★</span>
+              <span class="star empty">★</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 4px;">30% Complete</div>
+          </td>
+          <td>
+            <div class="badge badge-fast">Very Easy</div>
+            DB metadata + NER
+          </td>
+          <td>
+            ✓ Simple lookups<br>
+            ✓ Existing in Tada<br>
+            ✗ Complex questions<br>
+            ✗ Missing context
+          </td>
+        </tr>
+
+        <!-- Approach 2 -->
+        <tr>
+          <td class="approach-name">2. Multi-Query Routing</td>
+          <td>
+            <strong>Mechanism:</strong> Route query to each collection separately, run search, merge & global re-rank
+            <div class="code-block">For each collection:
+  search(query, collection_id)
+Merge all results
+Sort by score globally
+Return top-k</div>
+            <strong>Flow:</strong> Query → Route → Parallel search → Global merge → Return
+          </td>
+          <td>
+            <div class="badge badge-medium">200-400ms</div>
+            <div style="font-size: 12px; margin-top: 4px;">⚡⚡⚡ Medium</div>
+          </td>
+          <td>
+            <div class="rating">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star empty">★</span>
+              <span class="star empty">★</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 4px;">50% Complete</div>
+          </td>
+          <td>
+            <div class="badge badge-medium">Medium</div>
+            Routing logic + merge
+          </td>
+          <td>
+            ✓ Multi-domain queries<br>
+            ✓ Existing in Tada<br>
+            ✗ Score incomparability<br>
+            ✗ No relationships
+          </td>
+        </tr>
+
+        <!-- Approach 3 -->
+        <tr>
+          <td class="approach-name">3. Shared Entity Index</td>
+          <td>
+            <strong>Mechanism:</strong> Unified entity table across collections with cross-collection links
+            <div class="code-block">Entity table: [banking, healthcare, legal]
+Links: CUST_RAJ_BANK → CUST_RAJ_HC
+       CUST_RAJ_BANK → CUST_RAJ_LEGAL</div>
+            <strong>Flow:</strong> Query → Find entity → Follow links → Collect from all collections
+          </td>
+          <td>
+            <div class="badge badge-medium">150-250ms</div>
+            <div style="font-size: 12px; margin-top: 4px;">⚡⚡⚡ Medium</div>
+          </td>
+          <td>
+            <div class="rating">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star empty">★</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 4px;">70% Complete</div>
+          </td>
+          <td>
+            <div class="badge badge-medium">Medium</div>
+            Entity dedup + linking
+          </td>
+          <td>
+            ✓ Entity deduplication<br>
+            ✓ Efficient queries<br>
+            ✓ Clear lineage<br>
+            ✗ Complex setup
+          </td>
+        </tr>
+
+        <!-- Approach 4 -->
+        <tr>
+          <td class="approach-name">4. Graph Traversal</td>
+          <td>
+            <strong>Mechanism:</strong> Walk knowledge graph relationships across collections
+            <div class="code-block">MATCH (c:Customer)-[r*1..3]-(related)
+WHERE c.id = "CUST_RAJ"
+RETURN c, r, related</div>
+            <strong>Flow:</strong> Query → Find entity → Traverse graph → Collect related entities
+          </td>
+          <td>
+            <div class="badge badge-slow">400-800ms</div>
+            <div style="font-size: 12px; margin-top: 4px;">⚡⚡ Slower</div>
+          </td>
+          <td>
+            <div class="rating">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 4px;">90% Complete</div>
+          </td>
+          <td>
+            <div class="badge badge-slow">Complex</div>
+            Neo4j setup + ETL + indexes
+          </td>
+          <td>
+            ✓ Rich relationships<br>
+            ✓ Compliance audit<br>
+            ✓ Best quality<br>
+            ✗ Slower queries
+          </td>
+        </tr>
+
+        <!-- Approach 5 -->
+        <tr>
+          <td class="approach-name">5. Query Expansion</td>
+          <td>
+            <strong>Mechanism:</strong> Expand single query into domain-specific sub-queries, execute parallel, synthesize
+            <div class="code-block">"Can he get a loan?" expands to:
+Q1: Banking (credit score)
+Q2: Legal (existing loans)
+Q3: Healthcare (insurance)
+Execute parallel → Synthesize</div>
+            <strong>Flow:</strong> Query → Analyze → Expand → Parallel search → Synthesize
+          </td>
+          <td>
+            <div class="badge badge-slow">500-1000ms</div>
+            <div style="font-size: 12px; margin-top: 4px;">⚡ Slowest</div>
+          </td>
+          <td>
+            <div class="rating">
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+              <span class="star">★</span>
+            </div>
+            <div style="font-size: 12px; margin-top: 4px;">95% Complete</div>
+          </td>
+          <td>
+            <div class="badge badge-slow">Complex</div>
+            LLM expansion + routing
+          </td>
+          <td>
+            ✓ Best quality<br>
+            ✓ Semantic understanding<br>
+            ✓ Complex reasoning<br>
+            ✗ Expensive (LLM)
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Detailed Comparison -->
+  <div class="section">
+    <div class="section-title">📊 Detailed Efficiency Analysis</div>
+
+    <div class="detailed-comparison">
+      <div class="card">
+        <div class="card-title">1️⃣ Entity-Based</div>
+        <div class="card-content">
+          <div class="metric">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value badge-fast">50ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">DB Queries</span>
+            <span class="metric-value">1</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Chunks Retrieved</span>
+            <span class="metric-value">5-10</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Context Quality</span>
+            <span class="metric-value">30%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost/Query</span>
+            <span class="metric-value">$0.001</span>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+            <div class="pros">✓ In Tada now</div>
+            <div class="cons">✗ Missing relationships</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">2️⃣ Multi-Query Routing</div>
+        <div class="card-content">
+          <div class="metric">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value badge-medium">300ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">DB Queries</span>
+            <span class="metric-value">3 (parallel)</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Chunks Retrieved</span>
+            <span class="metric-value">15-20</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Context Quality</span>
+            <span class="metric-value">50%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost/Query</span>
+            <span class="metric-value">$0.003</span>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+            <div class="pros">✓ In Tada now</div>
+            <div class="cons">✗ Score incomparability</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">3️⃣ Shared Entity Index</div>
+        <div class="card-content">
+          <div class="metric">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value badge-medium">200ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">DB Queries</span>
+            <span class="metric-value">2-3</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Chunks Retrieved</span>
+            <span class="metric-value">20-30</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Context Quality</span>
+            <span class="metric-value">70%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost/Query</span>
+            <span class="metric-value">$0.005</span>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+            <div class="pros">✓ Entity dedup</div>
+            <div class="cons">✗ Complex setup</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">4️⃣ Graph Traversal</div>
+        <div class="card-content">
+          <div class="metric">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value badge-slow">600ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Graph Hops</span>
+            <span class="metric-value">3-5</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Chunks Retrieved</span>
+            <span class="metric-value">40-60</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Context Quality</span>
+            <span class="metric-value">90%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost/Query</span>
+            <span class="metric-value">$0.01</span>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+            <div class="pros">✓ Best quality</div>
+            <div class="cons">✗ Slower</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">5️⃣ Query Expansion</div>
+        <div class="card-content">
+          <div class="metric">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value badge-slow">800ms</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">LLM Calls</span>
+            <span class="metric-value">2</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Chunks Retrieved</span>
+            <span class="metric-value">50-80</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Context Quality</span>
+            <span class="metric-value">95%</span>
+          </div>
+          <div class="metric">
+            <span class="metric-label">Cost/Query</span>
+            <span class="metric-value">$0.05</span>
+          </div>
+          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+            <div class="pros">✓ Best semantic</div>
+            <div class="cons">✗ Most expensive</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision Matrix -->
+  <div class="section">
+    <div class="section-title">🎯 Which Approach for Each Query Type?</div>
+
+    <div class="decision-matrix">
+      <div class="use-case-row">
+        <div class="use-case-label">Simple: "Show account"</div>
+        <div class="use-case-answer"><span class="highlight">Approach 1</span> - 50ms, sufficient</div>
+      </div>
+
+      <div class="use-case-row">
+        <div class="use-case-label">Medium: "Transactions?"</div>
+        <div class="use-case-answer"><span class="highlight">Approach 2-3</span> - 200-300ms, good balance</div>
+      </div>
+
+      <div class="use-case-row">
+        <div class="use-case-label">Complex: "Eligible for loan?"</div>
+        <div class="use-case-answer"><span class="highlight">Approach 4-5</span> - 600-800ms, best quality</div>
+      </div>
+
+      <div class="use-case-row">
+        <div class="use-case-label">Relationship: "Are X & Y related?"</div>
+        <div class="use-case-answer"><span class="highlight">Approach 4</span> - Graph discovers directly</div>
+      </div>
+
+      <div class="use-case-row">
+        <div class="use-case-label">Compliance: "Audit trail?"</div>
+        <div class="use-case-answer"><span class="highlight">Approach 4</span> - Shows all entities & relationships</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendation -->
+  <div class="section">
+    <div class="section-title">✅ Recommendation for Tada</div>
+
+    <div class="recommendation">
+      <h3>🚀 PROGRESSIVE HYBRID APPROACH</h3>
+      <p><strong>Phase 1 (Now):</strong> Keep Approaches 1 + 2 (already working)</p>
+      <p><strong>Phase 2 (Week 3-4):</strong> Add Approach 3 (Shared Entity Index)</p>
+      <p><strong>Phase 3 (Month 2):</strong> Add Approach 4 (Graph Traversal)</p>
+      <p><strong>Phase 4 (Month 3):</strong> Add Approach 5 (Query Expansion for complex)</p>
+    </div>
+
+    <div class="warning-box">
+      <h3>⚠️ CRITICAL: Score Incomparability in Approach 2</h3>
+      <p>If banking uses Azure OpenAI and healthcare uses Cohere, scores from different embedding models aren't comparable.</p>
+      <p><strong>Fix:</strong> Normalize scores or migrate to Approach 3</p>
+    </div>
+  </div>
+
+  <!-- Summary -->
+  <div class="section">
+    <div class="section-title">📋 Quick Summary</div>
+
+    <table style="width: 100%; font-size: 13px;">
+      <tr style="border-bottom: 2px solid #d1d5db;">
+        <td style="padding: 12px; font-weight: 700;">Fastest</td>
+        <td><span class="highlight">Approach 1</span> (50ms)</td>
+      </tr>
+      <tr style="border-bottom: 2px solid #d1d5db;">
+        <td style="padding: 12px; font-weight: 700;">Best Balance</td>
+        <td><span class="highlight">Approach 3</span> (200ms, 70% quality)</td>
+      </tr>
+      <tr style="border-bottom: 2px solid #d1d5db;">
+        <td style="padding: 12px; font-weight: 700;">Best Quality</td>
+        <td><span class="highlight">Approach 5</span> (95% quality)</td>
+      </tr>
+      <tr style="border-bottom: 2px solid #d1d5db;">
+        <td style="padding: 12px; font-weight: 700;">For Banking</td>
+        <td><span class="highlight">Approach 4</span> (audit trail)</td>
+      </tr>
+      <tr>
+        <td style="padding: 12px; font-weight: 700;">Tada Priority</td>
+        <td><span class="highlight">HYBRID: 1→2→3→4</span> (progressive)</td>
+      </tr>
+    </table>
+  </div>
+</div>
